@@ -1,6 +1,6 @@
 services:
   ollama-app:
-    build: .
+    image: poswark/ollama-gemma2:0.0.1
     container_name: ollama-app
     env_file:
       - .env
