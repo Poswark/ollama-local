@@ -149,7 +149,7 @@ docker-compose up --build
 ```
 
 ⸻
-
+ 
 🧩 Casos de uso comunes
 - Backend seguro para una UI web (Streamlit, frontend, etc.)
 - Servicio intermedio detrás de Nginx
