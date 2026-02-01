@@ -7,12 +7,12 @@ import requests
 import uvicorn
 from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, ValidationError
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Ollama Gemma3n Secure Auth API")
+app = FastAPI(title="Ollama Gemma Secure Auth API")
 security = HTTPBearer()
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
@@ -21,28 +21,14 @@ RATE_LIMIT_PER_HOUR = int(os.getenv("RATE_LIMIT_PER_HOUR", "50"))
 
 user_requests = defaultdict(lambda: {"count": 0, "reset_time": time.time()})
 
-print(f"Starting Ollama Gemma3n Secure Auth API on port {os.getenv('PORT', '8000')}")
+print(f"Starting Ollama Gemma Secure Auth API on port {os.getenv('PORT', '8000')}")
 print(f"Ollama URL: {OLLAMA_URL}")
-print(f"Auth Token: {VALID_TOKEN}")
 print(f"Rate Limit: {RATE_LIMIT_PER_HOUR} requests per hour")
-
-
 
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=1000)
     model: str = Field(default="gemma:2b", min_length=1, max_length=100, pattern="^[a-zA-Z0-9_:-]+$")
-
-    @validator('message')
-    def validate_message(cls, v):
-        if not v.strip():
-            raise ValueError('Mesaj boş olamaz')
-
-        dangerous_chars = ['<script', '<?php', 'javascript:', 'data:']
-        for char in dangerous_chars:
-            if char.lower() in v.lower():
-                raise ValueError('Güvenlik riski: Tehlikeli karakter bulundu')
-        return v.strip()
-
+    
 
 def verify_token_and_rate_limit(
         request: Request,
@@ -50,7 +36,7 @@ def verify_token_and_rate_limit(
 ):
     if credentials.credentials != VALID_TOKEN:
         logger.warning(f"SECURITY_ALERT: Invalid token attempt from {request.client.host}")
-        raise HTTPException(status_code=401, detail="Geçersiz token")
+        raise HTTPException(status_code=401, detail="Invalid or missing token")
 
     client_ip = request.client.host
     current_time = time.time()
@@ -97,7 +83,7 @@ async def validate_token(request: Request):
 
 @app.get("/")
 async def root():
-    return {"message": "Ollama Gemma3n Secure Auth API", "version": "2.0-secure"}
+    return {"message": "Ollama gemma Secure Auth API", "version": "2.0-secure"}
 
 
 @app.post("/chat")
@@ -113,7 +99,7 @@ async def chat(
     try:
         models_response = requests.get(f"{OLLAMA_URL}/api/tags")
         if models_response.status_code != 200:
-            raise HTTPException(status_code=500, detail="Model Bulunamadı")
+            raise HTTPException(status_code=500, detail="Model")
 
         response = requests.post(
             f"{OLLAMA_URL}/api/generate",
@@ -132,11 +118,11 @@ async def chat(
             logger.info("CHAT_SUCCESS: Request completed")
             return response.json()
         else:
-            raise HTTPException(status_code=500, detail="Ollama API hatası")
+            raise HTTPException(status_code=500, detail="Ollama API error")
 
     except requests.exceptions.ConnectionError:
         logger.error("CHAT_ERROR: Ollama connection failed")
-        raise HTTPException(status_code=503, detail="Ollama servisine bağlanılamıyor")
+        raise HTTPException(status_code=503, detail="Ollama service unavailable")
     except Exception as e:
         logger.error(f"CHAT_ERROR: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Hata: {str(e)}")

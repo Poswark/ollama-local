@@ -1,7 +1,7 @@
 services:
-  auth-app:
+  ollama-app:
     build: .
-    container_name: auth-service
+    container_name: ollama-app
     env_file:
       - .env
     volumes:
@@ -16,23 +16,17 @@ services:
       - app-network
     restart: unless-stopped
 
-  caddy:
-    image: caddy:latest
-    container_name: caddy-proxy
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
     ports:
-      - "80:80"
       - "8080:8080"
-      - "443:443"
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-      - caddy_data:/data
-      - caddy_config:/config
-    environment:
-      - OLLAMA_ENDPOINT=host.docker.internal:11434
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
     networks:
       - app-network
     depends_on:
-      - auth-app
+      - ollama-app
     restart: unless-stopped
 
 networks:
@@ -41,5 +35,3 @@ networks:
 
 volumes:
   ollama_data:
-  caddy_data:
-  caddy_config:

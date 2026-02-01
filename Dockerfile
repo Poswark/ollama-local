@@ -6,14 +6,16 @@ RUN apt-get update && apt-get install -y python3 python3-pip && \
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip3 install --no-cache-dir -r requirements.txt --break-system-packages
+RUN pip3 install --no-cache-dir -r requirements.txt --break-system-packages 
 
+COPY . .
 
-# Make entrypoint executable
-COPY entrypoint.sh .
-COPY main.py .
-RUN chmod +x entrypoint.sh
+## Offline para server sin internet
+RUN ollama serve & \
+    sleep 10 && \
+    ollama pull gemma:2b && \
+    pkill ollama
 
-# Override the ollama entrypoint
 ENTRYPOINT []
-CMD ["/bin/bash", "./entrypoint.sh"]
+
+CMD /bin/ollama serve & sleep 5 && python3 main.py
