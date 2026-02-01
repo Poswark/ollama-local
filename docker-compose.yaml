@@ -1,0 +1,45 @@
+services:
+  auth-app:
+    build: .
+    container_name: auth-service
+    env_file:
+      - .env
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_PORT=11434
+    mem_limit: 10g
+    memswap_limit: 12g
+
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:latest
+    container_name: caddy-proxy
+    ports:
+      - "80:80"
+      - "8080:8080"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      - OLLAMA_ENDPOINT=host.docker.internal:11434
+    networks:
+      - app-network
+    depends_on:
+      - auth-app
+    restart: unless-stopped
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  ollama_data:
+  caddy_data:
+  caddy_config:
